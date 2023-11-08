@@ -27,7 +27,7 @@ CONF_VIA = "via"
 CONF_TIME = "time"
 
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=120)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
 ROUTE_SCHEMA = vol.Schema(
     {
@@ -166,17 +166,29 @@ class NSDepartureSensor(SensorEntity):
         if self._trips[0].departure_time_actual is not None:
             current_time = datetime.now().time()
             departure_actual_time = self._trips[0].departure_time_actual.time()
-            if departure_actual_time <= current_time:
-                attributes["departure_time_actual"] = self._trips[0].departure_time_actual.strftime("%H:%M")
+    
+            if departure_actual_time > current_time:
+                time_difference = (departure_actual_time.hour - current_time.hour) * 60 + (departure_actual_time.minute - current_time.minute)
+                if time_difference <= 5:
+                    # The departure time is within 5 minutes or earlier from the current time.
+                    # You can move to the next trip here or handle it accordingly.
+                    pass
+                else:
+                    # The departure time is in the future but more than 5 minutes from the current time.
+                    attributes["departure_time_actual"] = self._trips[0].departure_time_actual.strftime("%H:%M")
             else:
-                # Departure time is after the current time, move to the next trip
-                if len(self._trips) > 1:
-                    next_trip = self._trips[1]
-                    if next_trip.departure_time_actual is not None:
-                        next_time = next_trip.departure_time_actual.strftime("%H:%M")
-                    elif next_trip.departure_time_planned is not None:
-                        next_time = next_trip.departure_time_planned.strftime("%H:%M")
-                    attributes["departure_time_actual"] = next_time
+                # The departure time is in the past.
+        
+                # Check the next trips until a future departure time is found.
+                for i in range(1, len(self._trips)):
+                    next_departure_actual_time = self._trips[i].departure_time_actual.time()
+            
+                    if next_departure_actual_time > current_time:
+                        attributes["departure_time_actual"] = self._trips[i].departure_time_actual.strftime("%H:%M")
+                        break  # Break the loop once a future departure is found.
+                    else:
+                        # Continue to the next trip.
+                        pass
 
         # Delay departure attributes
         if (
