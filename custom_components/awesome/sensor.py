@@ -27,7 +27,7 @@ CONF_VIA = "via"
 CONF_TIME = "time"
 
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 ROUTE_SCHEMA = vol.Schema(
     {
@@ -165,8 +165,8 @@ class NSDepartureSensor(SensorEntity):
 
         # Actual departure attributes
         if self._trips[0].departure_time_actual is not None:
-            current_time = datetime.now().time() + timedelta(minutes=5)
-            departure_actual_time = self._trips[0].departure_time_actual.time()
+            current_time = datetime.now().time()
+            departure_actual_time = self._trips[0].departure_time_actual.time() + timedelta(minutes=5)
             if departure_actual_time <= current_time:
                 attributes["departure_time_actual"] = self._trips[0].departure_time_actual.strftime("%H:%M")
             else:
@@ -175,14 +175,9 @@ class NSDepartureSensor(SensorEntity):
                     next_trip = self._trips[1]
                     if next_trip.departure_time_actual is not None:
                         next_time = next_trip.departure_time_actual.strftime("%H:%M")
-                        if next_time <= current_time:
-                            attributes["departure_time_actual"] = next_time
-                        else:
-                            if len(self._trips) > 2:
-                                next_trip2 = self._trips[2]
-                                if next_trip2.departue_time_actual is not None:
-                                    next_time2 = next_trip2.departure_time_actual.strftime("%H:%M")
-                                    attributes["departure_time_actual"] = next_time2
+                    elif next_trip.departure_time_planned is not None:
+                        next_time = next_trip.departure_time_planned.strftime("%H:%M")
+                    attributes["departure_time_actual"] = next_time
 
         # Delay departure attributes
         if (
