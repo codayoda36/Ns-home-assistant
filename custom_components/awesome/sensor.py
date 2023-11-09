@@ -5,8 +5,6 @@ import requests
 
 from homeassistant.helpers.entity import Entity
 
-from .const import DOMAIN
-
 _LOGGER = logging.getLogger(__name__)
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
