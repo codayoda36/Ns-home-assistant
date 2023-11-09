@@ -165,13 +165,13 @@ class NSDepartureSensor(SensorEntity):
 
 
         if self._trips[0].departure_time_actual is not None:
-            current_time = datetime.now().time()
-            departure_actual_time = self._trips[0].departure_time_actual
+            current_datetime = datetime.now()
+            departure_actual_time = datetime.combine(datetime.today(), self._trips[0].departure_time_actual)
 
             # Check if the actual departure time is not after or 5 minutes before the current time
-            time_difference = departure_actual_time - current_time
-            if time_difference <= timedelta(minutes=5) and time_difference >= timedelta():
-                attributes["departure_time_actual"] = departure_actual_time.strftime("%H:%M")
+            time_difference = departure_actual_time - current_datetime
+            if timedelta(minutes=5) >= time_difference >= timedelta():
+                attributes["departure_time_actual"] = self._trips[0].departure_time_actual.strftime("%H:%M")
             else:
                 # Departure time is after the current time or more than 5 minutes before,
                 # move to the next trip if available
