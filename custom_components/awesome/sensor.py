@@ -166,8 +166,9 @@ class NSDepartureSensor(SensorEntity):
         # Actual departure attributes
         if self._trips[0].departure_time_actual is not None:
             current_time = datetime.now().time()
-            departure_actual_time = self._trips[0].departure_time_actual.time() + timedelta(minutes=5)
-            if departure_actual_time <= current_time:
+            departure_actual_time = self._trips[0].departure_time_actual
+            new_departure_time = (datetime.combine(datetime.today(), departure_actual_time) + timedelta(minutes=5)).time()
+            if departure_actual_time <= new_departure_time:
                 attributes["departure_time_actual"] = self._trips[0].departure_time_actual.strftime("%H:%M")
             else:
                 # Departure time is after the current time, move to the next trip
