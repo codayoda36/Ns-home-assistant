@@ -19,6 +19,8 @@ from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
+
 CONF_ROUTES = "routes"
 CONF_FROM = "from"
 CONF_TO = "to"
@@ -210,6 +212,7 @@ class NSDepartureSensor(SensorEntity):
 
         return attributes
 
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self) -> None:
         """Get the trip information."""
 
@@ -245,11 +248,13 @@ class NSDepartureSensor(SensorEntity):
             # Update the last update timestamp
             self.last_update = datetime.now()
 
-    def scheduled_update(self, _):
-        """Scheduled update method."""
+    async def async_update(self) -> None:
+        """Async version of the update method."""
         self.update()
 
     async def async_added_to_hass(self):
-        """Register the scheduled update method."""
-        self.hass.helpers.event.async_track_time_interval(self.scheduled_update, timedelta(minutes=1))
-        self.scheduled_update(None)
+        """Schedule the async_update method."""
+        self.hass.helpers.event.async_track_time_interval(
+            self.async_update, timedelta(minutes=1)
+        )
+        await self.async_update()
