@@ -1,112 +1,188 @@
-import logging
 from datetime import datetime, timedelta
-import pytz
 import requests
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
+from homeassistant.const import CONF_API_KEY
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.util import Throttle
+import voluptuous as vol
 
-from homeassistant.helpers.entity import Entity
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=120)
 
-_LOGGER = logging.getLogger(__name__)
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({vol.Required(CONF_API_KEY): cv.string})
+
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    api_key = config.get("api_key")
-    from_station = config.get("from_station")
-    to_station = config.get("to_station")
-    via_station = config.get("via_station")
+    """Set up the departure sensor."""
+    api_key = config[CONF_API_KEY]
 
-    add_entities([NsTripsSensor(api_key, from_station, to_station, via_station)])
+    sensors = []
+    for departure in config.get(CONF_ROUTES, {}):
+        sensors.append(
+            NSDepartureSensor(
+                api_key,
+                departure.get(CONF_NAME),
+                departure.get(CONF_FROM),
+                departure.get(CONF_TO),
+                departure.get(CONF_VIA),
+                departure.get(CONF_TIME),
+            )
+        )
+    add_entities(sensors, True)
 
 
-class NsTripsSensor(Entity):
-    def __init__(self, api_key, from_station, to_station, via_station=None):
+class NSDepartureSensor(SensorEntity):
+    """Implementation of a NS Departure Sensor."""
+
+    _attr_attribution = "Data provided by NS"
+    _attr_icon = "mdi:train"
+
+    def __init__(self, api_key, name, departure, heading, via, time):
+        """Initialize the sensor."""
         self._api_key = api_key
-        self._from_station = from_station
-        self._to_station = to_station
-        self._via_station = via_station
+        self._name = name
+        self._departure = departure
+        self._via = via
+        self._heading = heading
+        self._time = time
         self._state = None
-        self._attributes = {}
+        self._trips = None
 
     @property
     def name(self):
-        return "ns_trips_sensor"
+        """Return the name of the sensor."""
+        return self._name
 
     @property
-    def state(self):
+    def native_value(self):
+        """Return the next departure time."""
         return self._state
 
     @property
-    def device_state_attributes(self):
-        return self._attributes
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        if not self._trips:
+            return
 
-    def update(self):
-        base_url = "https://gateway.apiportal.ns.nl/reisinformatie-api/api/v3/trips"
+        if self._trips[0].trip_parts:
+            route = [self._trips[0].departure]
+            for k in self._trips[0].trip_parts:
+                route.append(k.destination)
 
-        params = {
-            "fromStation": self._from_station,
-            "toStation": self._to_station,
-            "viaStation": self._via_station
-            # Add more parameters as needed
+        # Static attributes
+        attributes = {
+            "going": self._trips[0].going,
+            "departure_time_planned": None,
+            "departure_time_actual": None,
+            "departure_delay": False,
+            "departure_platform_planned": self._trips[0].departure_platform_planned,
+            "departure_platform_actual": self._trips[0].departure_platform_actual,
+            "arrival_time_planned": None,
+            "arrival_time_actual": None,
+            "arrival_delay": False,
+            "arrival_platform_planned": self._trips[0].arrival_platform_planned,
+            "arrival_platform_actual": self._trips[0].arrival_platform_actual,
+            "next": None,
+            "status": self._trips[0].status.lower(),
+            "transfers": self._trips[0].nr_transfers,
+            "route": route,
+            "remarks": None,
         }
 
-        headers = {
-            "Ocp-Apim-Subscription-Key": self._api_key
-        }
+        # Planned departure attributes
+        if self._trips[0].departure_time_planned is not None:
+            attributes["departure_time_planned"] = self._trips[
+                0
+            ].departure_time_planned.strftime("%H:%M")
+
+        # Actual departure attributes
+        if self._trips[0].departure_time_actual is not None:
+            attributes["departure_time_actual"] = self._trips[
+                0
+            ].departure_time_actual.strftime("%H:%M")
+
+        # Delay departure attributes
+        if (
+            attributes["departure_time_planned"]
+            and attributes["departure_time_actual"]
+            and attributes["departure_time_planned"]
+            != attributes["departure_time_actual"]
+        ):
+            attributes["departure_delay"] = True
+
+        # Planned arrival attributes
+        if self._trips[0].arrival_time_planned is not None:
+            attributes["arrival_time_planned"] = self._trips[
+                0
+            ].arrival_time_planned.strftime("%H:%M")
+
+        # Actual arrival attributes
+        if self._trips[0].arrival_time_actual is not None:
+            attributes["arrival_time_actual"] = self._trips[
+                0
+            ].arrival_time_actual.strftime("%H:%M")
+
+        # Delay arrival attributes
+        if (
+            attributes["arrival_time_planned"]
+            and attributes["arrival_time_actual"]
+            and attributes["arrival_time_planned"] != attributes["arrival_time_actual"]
+        ):
+            attributes["arrival_delay"] = True
+
+        # Next attributes
+        if len(self._trips) > 1:
+            if self._trips[1].departure_time_actual is not None:
+                attributes["next"] = self._trips[1].departure_time_actual.strftime(
+                    "%H:%M"
+                )
+            elif self._trips[1].departure_time_planned is not None:
+                attributes["next"] = self._trips[1].departure_time_planned.strftime(
+                    "%H:%M"
+                )
+
+        return attributes
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self) -> None:
+        """Get the trip information."""
+        current_time = datetime.now()
+        min_departure_threshold = 5  # Minimum departure time threshold in minutes
+
+        # Check if the current time is less than 5 minutes before the specified departure time
+        if self._trips and self._trips[0].departure_time_actual:
+            actual_departure_time = self._trips[0].departure_time_actual
+            time_difference = actual_departure_time - current_time
+
+            if time_difference.total_seconds() / 60 <= min_departure_threshold:
+             # If the departure is within the threshold, update the state to None and return
+                self._state = None
+                self._trips = None
+                return
+
+        # Set the search parameter to search from a specific trip time or to just search for the next trip.
+        if self._time:
+            trip_time = (
+                datetime.today()
+                .replace(hour=self._time.hour, minute=self._time.minute)
+                .strftime("%d-%m-%Y %H:%M")
+            )
+        else:
+            trip_time = datetime.now().strftime("%d-%m-%Y %H:%M")
 
         try:
-            response = requests.get(base_url, params=params, headers=headers)
-
-            if response.status_code == 200:
-                trip_data = response.json()
-
-                min_departure_threshold = 5  # Minimum departure time threshold in minutes
-                current_time = datetime.now(pytz.timezone("Europe/Amsterdam"))
-
-                for trip in trip_data['trips']:
-                    leg = trip['legs'][0]  # Assuming there is only one leg in the trip
-                    departure_time_planned = datetime.strptime(leg['origin']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
-                    departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else None
-
-                    if departure_time_planned > current_time + timedelta(minutes=min_departure_threshold):
-                        next_trip = trip
-                        break
-
-                if 'next_trip' in locals():
-                    arrival_time_planned = datetime.strptime(leg['destination']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
-                    arrival_time_actual = datetime.strptime(leg['destination']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['destination'] else None
-                    next_planned_time = datetime.strptime(leg['nextExpected']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'nextExpected' in leg else None
-
-                    departure_delay = (departure_time_actual - departure_time_planned).total_seconds() / 60 if departure_time_actual else None
-                    arrival_delay = (arrival_time_actual - arrival_time_planned).total_seconds() / 60 if arrival_time_actual else None
-                    travel_time = (arrival_time_actual - departure_time_actual).total_seconds() / 60 if arrival_time_actual and departure_time_actual else None
-
-                    transfers = trip['transfers']
-                    departure_platform_planned = leg['origin']['plannedTrack']
-                    departure_platform_actual = leg['origin']['actualTrack'] if 'actualTrack' in leg['origin'] else 'Not available'
-                    arrival_platform_planned = leg['destination']['plannedTrack']
-                    arrival_platform_actual = leg['destination']['actualTrack'] if 'actualTrack' in leg['destination'] else 'Not available'
-
-                    self._state = "Next Trip"
-                    self._attributes = {
-                        "departure_time_planned": departure_time_planned.strftime('%H:%M'),
-                        "departure_time_actual": departure_time_actual.strftime('%H:%M') if departure_time_actual else 'Not available',
-                        "departure_delay": departure_delay,
-                        "departure_platform_planned": departure_platform_planned,
-                        "departure_platform_actual": departure_platform_actual,
-                        "arrival_time_planned": arrival_time_planned.strftime('%H:%M'),
-                        "arrival_time_actual": arrival_time_actual.strftime('%H:%M') if arrival_time_actual else 'Not available',
-                        "arrival_delay": arrival_delay,
-                        "arrival_platform_planned": arrival_platform_planned,
-                        "arrival_platform_actual": arrival_platform_actual,
-                        "next": next_planned_time.strftime('%H:%M') if next_planned_time else 'Not available',
-                        "transfers": transfers,
-                        "route": ' -> '.join([stop['name'] for stop in leg['stops']])
-                    }
-
+            self._trips = self._nsapi.get_trips(
+               trip_time, self._departure, self._via, self._heading, True, 0, 2
+            )
+            if self._trips:
+                if self._trips[0].departure_time_actual is None:
+                    planned_time = self._trips[0].departure_time_planned
+                    self._state = planned_time.strftime("%H:%M")
                 else:
-                    self._state = "No upcoming trips"
-                    self._attributes = {}
-
-            else:
-                _LOGGER.error(f"Error {response.status_code}: {response.text}")
-
-        except Exception as e:
-            _LOGGER.error(f"An error occurred: {e}")
+                    actual_time = self._trips[0].departure_time_actual
+                    self._state = actual_time.strftime("%H:%M")
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.HTTPError,
+        ) as error:
+            _LOGGER.error("Couldn't fetch trip info: %s", error)
