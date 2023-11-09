@@ -255,6 +255,6 @@ class NSDepartureSensor(SensorEntity):
     async def async_added_to_hass(self):
         """Schedule the async_update method."""
         self.hass.helpers.event.async_track_time_interval(
-            self.async_update, timedelta(minutes=1)
+            self.async_update, timedelta(minutes=2)
         )
         await self.async_update()
