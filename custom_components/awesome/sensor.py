@@ -19,7 +19,7 @@ from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=120)
 
 CONF_ROUTES = "routes"
 CONF_FROM = "from"
@@ -231,7 +231,7 @@ class NSDepartureSensor(SensorEntity):
             self._trips = self._nsapi.get_trips(
                 trip_time, self._departure, self._via, self._heading, True, 0, 2
             )
-            if self._trips:
+            if self._trips is not None:  # Check if _trips is not None
                 if self._trips[0].departure_time_actual is None:
                     planned_time = self._trips[0].departure_time_planned
                     self._state = planned_time.strftime("%H:%M")
@@ -255,6 +255,6 @@ class NSDepartureSensor(SensorEntity):
     async def async_added_to_hass(self):
         """Schedule the async_update method."""
         self.hass.helpers.event.async_track_time_interval(
-            self.async_update, timedelta(minutes=2)
+            self.async_update, timedelta(minutes=3)
         )
         await self.async_update()
