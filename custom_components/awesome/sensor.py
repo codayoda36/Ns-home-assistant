@@ -15,9 +15,10 @@ from homeassistant.exceptions import PlatformNotReady
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt
 
 _LOGGER = logging.getLogger(__name__)
-
 
 CONF_ROUTES = "routes"
 CONF_FROM = "from"
@@ -96,6 +97,23 @@ def valid_stations(stations, given_stations):
     return True
 
 
+class NSDepartureSensorUpdateManager(DataUpdateCoordinator):
+    """Update manager for NSDepartureSensor."""
+
+    SCAN_INTERVAL = timedelta(minutes=1)
+
+    def __init__(self, sensor):
+        """Initialize the update manager."""
+        self.sensor = sensor
+        super().__init__(
+            sensor.hass,
+            _LOGGER,
+            name=f"{sensor.name} ({sensor.unique_id})",
+            update_method=self.sensor.async_update,
+            update_interval=self.SCAN_INTERVAL,
+        )
+
+
 class NSDepartureSensor(SensorEntity):
     """Implementation of a NS Departure Sensor."""
 
@@ -114,6 +132,7 @@ class NSDepartureSensor(SensorEntity):
         self._state = None
         self._trips = None
         self.entity_id = f"sensor.ns_departure_{name.lower().replace(' ', '_')}"
+        self.update_manager = NSDepartureSensorUpdateManager(self)
 
     @property
     def name(self):
