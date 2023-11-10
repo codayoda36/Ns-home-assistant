@@ -10,8 +10,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-def async_track_time_interval(hass, interval, action):
-    return asyncio.create_task(asyncio.sleep(interval, loop=hass.loop)).add_done_callback(action)
+async def async_track_time_interval(hass, interval, action):
+    while True:
+        await asyncio.sleep(interval)
+        await action()
 
 def setup_platform(
     hass: HomeAssistant,
