@@ -113,6 +113,7 @@ class NSDepartureSensor(SensorEntity):
         self._time = time
         self._state = None
         self._trips = None
+        self.entity_id = f"sensor.ns_departure_{name.lower().replace(' ', '_')}"
 
     @property
     def name(self):
