@@ -75,24 +75,24 @@ class ExampleSensor(SensorEntity):
         }
 
         try:
-        response = requests.get(base_url, params=params, headers=headers)
+            response = requests.get(base_url, params=params, headers=headers)
 
-        if response.status_code == 200:
-            trip_data = response.json()
+            if response.status_code == 200:
+                trip_data = response.json()
 
-            min_departure_threshold = 5  # Minimum departure time threshold in minutes
-            current_time = datetime.now(pytz.timezone("Europe/Amsterdam"))
+                min_departure_threshold = 5  # Minimum departure time threshold in minutes
+                current_time = datetime.now(pytz.timezone("Europe/Amsterdam"))
 
-            for trip in trip_data['trips']:
-                leg = trip['legs'][0]  # Assuming there is only one leg in the trip
-                departure_time_planned = datetime.strptime(leg['origin']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
-                departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else None
+                for trip in trip_data['trips']:
+                    leg = trip['legs'][0]  # Assuming there is only one leg in the trip
+                    departure_time_planned = datetime.strptime(leg['origin']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
+                    departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else None
 
-                self._test_attribute = leg
-        else:
-            print(f"Error {response.status_code}: {response.text}")
+                    self._test_attribute = leg
+            else:
+                print(f"Error {response.status_code}: {response.text}")
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    finally: 
-        self.async_write_ha_state()
+        except Exception as e:
+            print(f"An error occurred: {e}")
+        finally: 
+            self.async_write_ha_state()
