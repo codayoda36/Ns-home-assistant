@@ -4,15 +4,7 @@ This custom sensor integration provides real-time travel information for train j
 
 ## Installation
 
-1. Copy the `custom_components` folder to your Home Assistant configuration directory.
-
-    ```
-    /config
-    ├── custom_components
-    │   └── ns_reisinformatie
-    │       └── __init__.py
-    │       └── sensor.py
-    ```
+1. Add the following link to you hacs installation https://github.com/codayoda36/Ns-home-assistant/tree/master and restart home assistant 
 
 2. Add the following to your `configuration.yaml` file:
 
@@ -23,28 +15,26 @@ This custom sensor integration provides real-time travel information for train j
         min_departure_threshold: 5
         update_frequency: 120
         routes:
-          - from_station: "Amsterdam"
-            to_station: "Utrecht"
-            sensor_name: "amsterdam_to_utrecht"
+          - from_station: "alm"
+            to_station: "shl"
+            sensor_name: "almere_to_schiphol"
             travel_time: "08:00"
-          - from_station: "Utrecht"
-            to_station: "Amsterdam"
-            sensor_name: "utrecht_to_amsterdam"
+          - from_station: "shl"
+            to_station: "alm"
+            sensor_name: "schiphol_to_almere"
     ```
 
 ## Configuration
 
-### Required Configuration Options:
+### Station Codes:
+- `station codes`: For the sations you need to use the sation code you can get those [here](https://nl.wikipedia.org/wiki/Lijst_van_spoorwegstations_in_Nederland).
+- 
+### Configuration Options:
 
 - `api_key`: Your NS API key. You can obtain it by [creating an account on the NS API portal](https://apiportal.ns.nl/).
-
-### Optional Configuration Options:
-
-- `min_departure_threshold`: Minimum time (in minutes) before departure to start fetching data. Default is `5` minutes.
-
-- `update_frequency`: Frequency (in seconds) to update the sensor data. Default is `120` seconds.
-
-- `routes`: List of dictionaries representing different routes. Each dictionary should contain the following mandatory parameters:
+- `min_departure_threshold (Optional)`: Time before the next trip is showen so if this is set to 5 if the train leaves in 5 minutes or less the next train is showen. Default is `5` minutes.
+- `update_frequency (Optional)`: Frequency (in seconds) to update the sensor data. Default is `120` seconds.
+- `routes`: List of dictionaries representing different routes. Each dictionary should contain the following parameters:
 
   - `from_station`: Departure station.
   
@@ -52,21 +42,36 @@ This custom sensor integration provides real-time travel information for train j
   
   - `sensor_name`: Name of the sensor.
 
-  - `travel_time`: Departure time for the journey (optional).
+  - `travel_time (Optional)`: Departure time for the journey.
+ 
+### Sensor Attributes
 
-### Example Configuration:
+- `arrival_time_planned`: Planned arrival time at the destination.
 
-```yaml
-sensor:
-  - platform: ns_reisinformatie
-    api_key: YOUR_NS_API_KEY
-    min_departure_threshold: 5
-    update_frequency: 120
-    routes:
-      - from_station: "Amsterdam"
-        to_station: "Utrecht"
-        sensor_name: "amsterdam_to_utrecht"
-        travel_time: "08:00"
-      - from_station: "Utrecht"
-        to_station: "Amsterdam"
-        sensor_name: "utrecht_to_amsterdam"
+- `arrival_time_actual`: Actual arrival time at the destination.
+
+- `departure_time_planned`: Planned departure time from the origin.
+
+- `departure_time_actual`: Actual departure time from the origin.
+
+- `departure_delay`: Departure delay in minutes.
+
+- `arrival_delay`: Arrival delay in minutes.
+
+- `travel_time_actual`: Actual travel time in minutes.
+
+- `travel_time_planned`: Planned travel time in minutes.
+
+- `transfers`: Number of transfers.
+
+- `departure_platform_planned`: Planned departure platform.
+
+- `departure_platform_actual`: Actual departure platform.
+
+- `arrival_platform_planned`: Planned arrival platform.
+
+- `arrival_platform_actual`: Actual arrival platform.
+
+- `status`: Current status of the journey.
+
+- `last_updated`: Time when the sensor was last updated.
