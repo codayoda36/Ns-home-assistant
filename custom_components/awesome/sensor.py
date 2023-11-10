@@ -15,10 +15,11 @@ from homeassistant.exceptions import PlatformNotReady
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.util import Throttle
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt
 
 _LOGGER = logging.getLogger(__name__)
+
 
 CONF_ROUTES = "routes"
 CONF_FROM = "from"
@@ -95,23 +96,6 @@ def valid_stations(stations, given_stations):
             _LOGGER.warning("Station '%s' is not a valid station", station)
             return False
     return True
-
-
-class NSDepartureSensorUpdateManager(DataUpdateCoordinator):
-    """Update manager for NSDepartureSensor."""
-
-    SCAN_INTERVAL = timedelta(minutes=1)
-
-    def __init__(self, sensor):
-        """Initialize the update manager."""
-        self.sensor = sensor
-        super().__init__(
-            sensor.hass,
-            _LOGGER,
-            name=f"{sensor.name} ({sensor.unique_id})",
-            update_method=self.sensor.async_update,
-            update_interval=self.SCAN_INTERVAL,
-        )
 
 
 class NSDepartureSensor(SensorEntity):
@@ -229,7 +213,7 @@ class NSDepartureSensor(SensorEntity):
 
         return attributes
 
-    def update(self) -> None:
+    async def async_update(self) -> None:
         """Get the trip information."""
         if not self.should_update:
             return
@@ -246,8 +230,15 @@ class NSDepartureSensor(SensorEntity):
             trip_time = datetime.now().strftime("%d-%m-%Y %H:%M")
 
         try:
-            self._trips = self._nsapi.get_trips(
-                trip_time, self._departure, self._via, self._heading, True, 0, 2
+            self._trips = await self.hass.async_add_executor_job(
+                self._nsapi.get_trips,
+                trip_time,
+                self._departure,
+                self._via,
+                self._heading,
+                True,
+                0,
+                2,
             )
             if self._trips is not None:  # Check if _trips is not None
                 if self._trips[0].departure_time_actual is None:
@@ -262,3 +253,18 @@ class NSDepartureSensor(SensorEntity):
         ) as error:
             _LOGGER.error("Couldn't fetch trip info: %s", error)
             return
+
+
+class NSDepartureSensorUpdateManager(DataUpdateCoordinator):
+    """NS Departure Sensor Update Manager."""
+
+    def __init__(self, sensor):
+        """Initialize the update manager."""
+        self.sensor = sensor
+        update_interval = timedelta(minutes=1)
+        super().__init__(sensor.hass, _LOGGER, name=f"NS Departure Sensor Update Manager - {sensor.name}", update_interval=update_interval)
+
+    async def _async_update_data(self):
+        """Fetch data from the sensor."""
+        await self.sensor.async_update()
+        return self.sensor._trips
