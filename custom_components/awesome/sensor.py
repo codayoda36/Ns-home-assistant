@@ -1,43 +1,49 @@
-"""Custom sensor for Home Assistant."""
+from __future__ import annotations
 
-from homeassistant.helpers.entity import Entity
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
+from homeassistant.const import UnitOfTemperature
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-DOMAIN = "example_sensor"
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+def setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None
+) -> None:
     """Set up the sensor platform."""
-    async_add_entities([MyCustomSensor()])
+    add_entities([ExampleSensor()])
 
-class MyCustomSensor(Entity):
+
+class ExampleSensor(SensorEntity):
     """Representation of a Sensor."""
 
-    def __init__(self):
-        """Initialize the sensor."""
-        self._state = None
-        self._attribute1 = None
-        self._attribute2 = None
+    _attr_name = "Examplesensor"
 
     @property
     def name(self):
-        """Return the name of the sensor."""
-        return "My Custom Sensor"
+        return "Examplesensor"
 
     @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
+    def native_value(self):
+        return 23
 
     @property
-    def device_state_attributes(self):
-        """Return the state attributes."""
-        return {
-            "attribute1": self._attribute1,
-            "attribute2": self._attribute2
+    def extra_state_attributes(self):
+        attributes = {
+            "testAttirbute": "exampleValue",
         }
+        return attributes
 
-    def update(self):
-        """Fetch new state data for the sensor."""
-        # Update the state and attributes here
-        self._state = "New State"
-        self._attribute1 = "Value 1"
-        self._attribute2 = "Value 2"
+    def update(self) -> None:
+        """Fetch new state data for the sensor.
+
+        This is the only method that should fetch new data for Home Assistant.
+        """
+        self._attr_native_value = 23
