@@ -15,7 +15,6 @@ from homeassistant.exceptions import PlatformNotReady
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -103,8 +102,6 @@ class NSDepartureSensor(SensorEntity):
     _attr_attribution = "Data provided by NS"
     _attr_icon = "mdi:train"
 
-    MIN_UPDATE_INTERVAL = timedelta(minutes=1)
-
     def __init__(self, hass, nsapi, name, departure, heading, via, time):
         """Initialize the sensor."""
         self.hass = hass
@@ -116,7 +113,6 @@ class NSDepartureSensor(SensorEntity):
         self._time = time
         self._state = None
         self._trips = None
-        self.last_update = None  # Add this line to store the last update timestamp
 
     @property
     def name(self):
@@ -213,14 +209,6 @@ class NSDepartureSensor(SensorEntity):
 
         return attributes
 
-    @property
-    def should_update(self):
-        """Check if an update should be performed."""
-        if self.last_update is None:
-            return True
-        return datetime.now() - self.last_update > self.MIN_UPDATE_INTERVAL
-
-    @Throttle(MIN_UPDATE_INTERVAL)
     def update(self) -> None:
         """Get the trip information."""
         if not self.should_update:
@@ -254,5 +242,3 @@ class NSDepartureSensor(SensorEntity):
         ) as error:
             _LOGGER.error("Couldn't fetch trip info: %s", error)
             return
-        finally:
-            self.last_update = datetime.now()
