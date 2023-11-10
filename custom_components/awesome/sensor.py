@@ -9,8 +9,9 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.event import async_track_time_interval
 
+def async_track_time_interval(hass, interval, action):
+    return asyncio.create_task(asyncio.sleep(interval, loop=hass.loop)).add_done_callback(action)
 
 def setup_platform(
     hass: HomeAssistant,
@@ -28,7 +29,7 @@ class ExampleSensor(SensorEntity):
     _attr_name = "Examplesensor"
 
     _test_attribute = random.choice("abcdefghijklmnopqrstuvwxyz")
-    
+
     @property
     def name(self):
         return "Examplesensor"
@@ -46,7 +47,7 @@ class ExampleSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """Register state update callback."""
-        self._state_update_task = asyncio.create_task(async_track_time_interval(self.hass, self.async_update, 30))
+        self._state_update_task = async_track_time_interval(self.hass, 30, self.async_update)
 
     async def async_will_remove_from_hass(self):
         """Unregister state update callback."""
