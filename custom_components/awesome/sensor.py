@@ -19,7 +19,6 @@ from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=120)
 
 CONF_ROUTES = "routes"
 CONF_FROM = "from"
@@ -104,6 +103,8 @@ class NSDepartureSensor(SensorEntity):
     _attr_attribution = "Data provided by NS"
     _attr_icon = "mdi:train"
 
+    MIN_UPDATE_INTERVAL = timedelta(minutes=1)
+
     def __init__(self, hass, nsapi, name, departure, heading, via, time):
         """Initialize the sensor."""
         self.hass = hass
@@ -126,7 +127,7 @@ class NSDepartureSensor(SensorEntity):
     def native_value(self):
         """Return the next departure time."""
         return self._state
-
+    
     @property
     def extra_state_attributes(self):
         """Return the state attributes."""
@@ -212,9 +213,18 @@ class NSDepartureSensor(SensorEntity):
 
         return attributes
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    @property
+    def should_update(self):
+        """Check if an update should be performed."""
+        if self.last_update is None:
+            return True
+        return datetime.now() - self.last_update > self.MIN_UPDATE_INTERVAL
+
+    @Throttle(MIN_UPDATE_INTERVAL)
     def update(self) -> None:
         """Get the trip information."""
+        if not self.should_update:
+            return
 
         # Set the search parameter to search from a specific trip time
         # or to just search for the next trip.
@@ -245,16 +255,4 @@ class NSDepartureSensor(SensorEntity):
             _LOGGER.error("Couldn't fetch trip info: %s", error)
             return
         finally:
-            # Update the last update timestamp
             self.last_update = datetime.now()
-
-    async def async_update(self) -> None:
-        """Async version of the update method."""
-        self.update()
-
-    async def async_added_to_hass(self):
-        """Schedule the async_update method."""
-        self.hass.helpers.event.async_track_time_interval(
-            self.async_update, timedelta(minutes=3)
-        )
-        await self.async_update()
