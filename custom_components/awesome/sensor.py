@@ -63,9 +63,8 @@ class ExampleSensor(SensorEntity):
         base_url = "https://gateway.apiportal.ns.nl/reisinformatie-api/api/v3/trips"
 
         params = {
-            "fromStation": from_station,
-            "toStation": to_station,
-            "viaStation": via_station
+            "fromStation": "alm",
+            "toStation": "shl"
             # Add more parameters as needed
         }
 
