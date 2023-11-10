@@ -1,4 +1,3 @@
-"""Platform for sensor integration."""
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
@@ -31,16 +30,19 @@ class ExampleSensor(SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def name():
+    def name(self):
         return "Examplesensor"
+
     @property
-    def native_value():
+    def native_value(self):
         return 23
+
     @property
-    def extra_state_attributes():
+    def extra_state_attributes(self):
         attributes = {
             "testAttirbute": "exampleValue",
         }
+        return attributes
 
     def update(self) -> None:
         """Fetch new state data for the sensor.
