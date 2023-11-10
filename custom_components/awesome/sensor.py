@@ -1,6 +1,17 @@
+import asyncio
+import random
+import requests
+import logging
 from datetime import datetime
 import pytz
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.const import UnitOfTemperature
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.template import Template
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_track_time_interval(hass, interval, action):
     while True:
