@@ -1,4 +1,5 @@
 import asyncio
+import random
 import logging
 from datetime import datetime, timedelta
 import pytz
@@ -23,23 +24,31 @@ def setup_platform(
 ) -> None:
     """Set up the sensor platform."""
     api_key = config.get("api_key", "")
-    from_station = config.get("from_station", "")
-    to_station = config.get("to_station", "")
     min_departure_threshold = config.get("min_departure_threshold", 5)
-    sensor_name = config.get("sensor_name", "")
+    update_frequency = config.get("update_frequency", 120)
+    routes = config.get("routes", [])
 
-    add_entities([ExampleSensor(hass, api_key, from_station, to_station, min_departure_threshold, sensor_name)])
+    sensors = []
+    for route in routes:
+        from_station = route.get("from_station", "")
+        to_station = route.get("to_station", "")
+        sensor_name = route.get("sensor_name", "")
+
+        sensors.append(ExampleSensor(hass, api_key, from_station, to_station, min_departure_threshold, sensor_name, update_frequency))
+
+    add_entities(sensors)
 
 class ExampleSensor(SensorEntity):
     """Representation of a Sensor."""
 
-    def __init__(self, hass: HomeAssistant, api_key: str, from_station: str, to_station: str, min_departure_threshold: int, sensor_name: str):
+    def __init__(self, hass: HomeAssistant, api_key: str, from_station: str, to_station: str, min_departure_threshold: int, sensor_name: str, update_frequency: int):
         self._hass = hass
         self._api_key = api_key
         self._from_station = from_station
         self._to_station = to_station
         self._min_departure_threshold = min_departure_threshold
         self._sensor_name = sensor_name
+        self._update_frequency = update_frequency
 
         self._arrival_time_planned_attribute = None
         self._arrival_time_actual_attribute = None
@@ -62,7 +71,7 @@ class ExampleSensor(SensorEntity):
 
     @property
     def native_value(self):
-        return 23
+        return self._departure_time_planned_attribute
 
     @property
     def extra_state_attributes(self):
@@ -85,7 +94,7 @@ class ExampleSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """Register state update callback."""
-        self._state_update_task = async_track_time_interval(self.hass, 30, self.async_update)
+        self._state_update_task = async_track_time_interval(self.hass, self._update_frequency, self.async_update)
 
     async def async_will_remove_from_hass(self):
         """Unregister state update callback."""
@@ -139,12 +148,12 @@ class ExampleSensor(SensorEntity):
                             self._transfers_attribute = trip['transfers']
                             self._departure_platform_planned_attribute = leg['origin']['plannedTrack']
                             self._departure_platform_actual_attribute = leg['origin']['actualTrack'] if 'actualTrack' in leg['origin'] else 'Not available'
-                            self._departure_platform_planned_attribute = leg['destination']['plannedTrack']
-                            self._departure_platform_actual_attribute = leg['destination']['actualTrack'] if 'actualTrack' in leg['destination'] else 'Not available'
+                            self._arrival_platform_planned_attribute = leg['destination']['plannedTrack']
+                            self._arrival_platform_actual_attribute = leg['destination']['actualTrack'] if 'actualTrack' in leg['destination'] else 'Not available'
                             self._last_updated = datetime.now(pytz.timezone("Europe/Amsterdam")).strftime("%H:%M")
 
                     else:
-                        _LOGGER.debug("Error with the api call: %s", await response.text())
+                        _LOGGER.error("Error with the api call: %s", await response.text())
 
         except Exception as e:
             _LOGGER.error("Error making request to NS API: %s", e)
