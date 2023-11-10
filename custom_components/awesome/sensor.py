@@ -1,5 +1,4 @@
 import asyncio
-import random
 import logging
 from datetime import datetime, timedelta
 import pytz
@@ -24,10 +23,10 @@ def setup_platform(
 ) -> None:
     """Set up the sensor platform."""
     api_key = config.get("api_key", "")
-    from_station = config.get("from_station", "alm")
-    to_station = config.get("to_station", "shl")
+    from_station = config.get("from_station", "")
+    to_station = config.get("to_station", "")
     min_departure_threshold = config.get("min_departure_threshold", 5)
-    sensor_name = config.get("sensor_name", "Examplesensor")
+    sensor_name = config.get("sensor_name", "")
 
     add_entities([ExampleSensor(hass, api_key, from_station, to_station, min_departure_threshold, sensor_name)])
 
@@ -51,10 +50,11 @@ class ExampleSensor(SensorEntity):
         self._arrival_delay_attribute = None
         self._travel_time_attribute = None 
         self._transfers_attribute = None
-        self._departure_platform_planned_attribute = None
-        self._departure_platform_actual_attribute = None
-        self._arrival_platform_planned_attribute = None
-        self._arrival_platform_actual_attribute = None
+        self._departure_platform_planned_attribute = 0
+        self._departure_platform_actual_attribute = 0
+        self._arrival_platform_planned_attribute = 0
+        self._arrival_platform_actual_attribute = 0
+        self._last_updated = datetime.now(pytz.timezone("Europe/Amsterdam")).strftime("%H:%M")
 
     @property
     def name(self):
@@ -79,6 +79,7 @@ class ExampleSensor(SensorEntity):
             "departure_platform_actual": self._departure_platform_actual_attribute,
             "arrival_platform_planned": self._arrival_platform_planned_attribute,
             "arrival_platform_actual": self._arrival_platform_actual_attribute,
+            "last_updated": self._last_updated,
         }
         return attributes
 
@@ -116,27 +117,31 @@ class ExampleSensor(SensorEntity):
                             leg = trip['legs'][0]  # Assuming there is only one leg in the trip
                             departure_time_planned = datetime.strptime(leg['origin']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
                             departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else departure_time_planned
+                            
+                            arrival_time_planned = datetime.strptime(leg['destination']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
+                            arrival_time_actual = datetime.strptime(leg['destination']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['destination'] else self._arrival_time_planned_attribute
 
                             if departure_time_planned > current_time + timedelta(minutes=self._min_departure_threshold):
                                 next_trip = trip
                                 break
                         
                         if 'next_trip' in locals():
-                            self._arrival_time_planned_attribute = datetime.strptime(leg['destination']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
-                            self._arrival_time_actual_attribute = datetime.strptime(leg['destination']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['destination'] else self._arrival_time_planned_attribute
+                            self._arrival_time_planned_attribute = arrival_time_planned.strftime("%H:%M")
+                            self._arrival_time_actual_attribute = arrival_time_actual.strftime("%H:%M")
 
-                            self._departure_time_planned_attribute = departure_time_planned
-                            self._departure_time_actual_attribute = departure_time_actual
+                            self._departure_time_planned_attribute = departure_time_planned.strftime("%H:%M")
+                            self._departure_time_actual_attribute = departure_time_actual.strftime("%H:%M")
 
                             self._departure_delay_attribute = (departure_time_actual - departure_time_planned).total_seconds() / 60 if departure_time_actual else None
-                            self._arrival_delay_attribute = (self._arrival_time_actual_attribute - self._arrival_time_planned_attribute).total_seconds() / 60 if self._arrival_time_actual_attribute else None
-                            self._travel_time_attribute = (self._arrival_time_actual_attribute - departure_time_actual).total_seconds() / 60 if self._arrival_time_actual_attribute and departure_time_actual else None
+                            self._arrival_delay_attribute = (arrival_time_actual - arrival_time_planned).total_seconds() / 60 if arrival_time_actual else None
+                            self._travel_time_attribute = (arrival_time_actual - departure_time_actual).total_seconds() / 60 if arrival_time_actual and departure_time_actual else None
 
                             self._transfers_attribute = trip['transfers']
                             self._departure_platform_planned_attribute = leg['origin']['plannedTrack']
                             self._departure_platform_actual_attribute = leg['origin']['actualTrack'] if 'actualTrack' in leg['origin'] else 'Not available'
                             self._departure_platform_planned_attribute = leg['destination']['plannedTrack']
                             self._departure_platform_actual_attribute = leg['destination']['actualTrack'] if 'actualTrack' in leg['destination'] else 'Not available'
+                            self._last_updated = datetime.now(pytz.timezone("Europe/Amsterdam")).strftime("%H:%M")
 
                     else:
                         _LOGGER.debug("Error with the api call: %s", await response.text())
