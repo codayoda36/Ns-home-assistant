@@ -98,5 +98,5 @@ class ExampleSensor(SensorEntity):
 
         except Exception as e:
             _LOGGER.debug("A exception occured: %s", e)
-            self._test_attribute = random.choice("mnopqrstuvwxyz")
+            self._test_attribute = e
         self.async_write_ha_state()
