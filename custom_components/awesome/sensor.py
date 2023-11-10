@@ -25,9 +25,6 @@ class ExampleSensor(SensorEntity):
     """Representation of a Sensor."""
 
     _attr_name = "Example Temperature"
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def name(self):
