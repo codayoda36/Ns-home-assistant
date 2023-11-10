@@ -32,7 +32,7 @@ class ExampleSensor(SensorEntity):
 
     @property
     def name():
-        return "Example sensor"
+        return "Examplesensor"
     @property
     def native_value():
         return 23
