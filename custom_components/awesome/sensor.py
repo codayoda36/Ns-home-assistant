@@ -59,12 +59,14 @@ class ExampleSensor(SensorEntity):
         self._next_planned_time_attribute = None
         self._departure_delay_attribute = None
         self._arrival_delay_attribute = None
-        self._travel_time_attribute = None 
+        self._travel_time_actual_attribute = None 
+        self._travel_time_planned_attribute = None
         self._transfers_attribute = None
         self._departure_platform_planned_attribute = 0
         self._departure_platform_actual_attribute = 0
         self._arrival_platform_planned_attribute = 0
         self._arrival_platform_actual_attribute = 0
+        self._status_attribute = "Unkown"
         self._last_updated = datetime.now(pytz.timezone("Europe/Amsterdam")).strftime("%H:%M")
 
     def parse_time(self, time_str):
@@ -90,12 +92,14 @@ class ExampleSensor(SensorEntity):
             "departure_time_actual": self._departure_time_actual_attribute,
             "departure_delay": self._departure_delay_attribute,
             "arrival_delay": self._arrival_delay_attribute,
-            "travel_time": self._travel_time_attribute,
+            "travel_time_actual": self._travel_time_actual_attribute,
+            "travel_time_planned": self._travel_time_planned_attribute,
             "tranfers": self._transfers_attribute,
             "departure_platform_planned": self._departure_platform_planned_attribute,
             "departure_platform_actual": self._departure_platform_actual_attribute,
             "arrival_platform_planned": self._arrival_platform_planned_attribute,
             "arrival_platform_actual": self._arrival_platform_actual_attribute,
+            "status": self._status_attribute,
             "last_updated": self._last_updated,
         }
         return attributes
@@ -140,6 +144,9 @@ class ExampleSensor(SensorEntity):
                                 arrival_time_planned = datetime.strptime(leg['destination']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
                                 arrival_time_actual = datetime.strptime(leg['destination']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['destination'] else self._arrival_time_planned_attribute
 
+                                actual_duration_in_minutes = trip['actualDurationInMinutes']
+                                planned_duration_in_minutes = trip['plannedDurationInMinutes']
+
                                 if departure_time_planned > datetime.now(pytz.timezone("Europe/Amsterdam")) + timedelta(minutes=self._min_departure_threshold):
                                     next_trip = trip
                                     break
@@ -151,9 +158,11 @@ class ExampleSensor(SensorEntity):
                                 self._departure_time_planned_attribute = departure_time_planned.strftime("%H:%M")
                                 self._departure_time_actual_attribute = departure_time_actual.strftime("%H:%M")
 
-                                self._departure_delay_attribute = (departure_time_actual - departure_time_planned).total_seconds() / 60 if departure_time_actual else None
-                                self._arrival_delay_attribute = (arrival_time_actual - arrival_time_planned).total_seconds() / 60 if arrival_time_actual else None
-                                self._travel_time_attribute = (arrival_time_actual - departure_time_actual).total_seconds() / 60 if arrival_time_actual and departure_time_actual else None
+                                self._departure_delay_attribute = (departure_time_actual - departure_time_planned).total_seconds() / 60 if departure_time_actual else 0
+                                self._arrival_delay_attribute = (arrival_time_actual - arrival_time_planned).total_seconds() / 60 if arrival_time_actual else 0
+                                self._travel_time_actual_attribute = actual_duration_in_minutes if actual_duration_in_minutes else planned_duration_in_minutes
+                                self._travel_time_planned_attribute = planned_duration_in_minutes
+                                self._status_attribute = trip['status']
 
                                 self._transfers_attribute = trip['transfers']
                                 self._departure_platform_planned_attribute = leg['origin']['plannedTrack']
