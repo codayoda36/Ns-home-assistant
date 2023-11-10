@@ -1,7 +1,7 @@
 import asyncio
 import random
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import aiohttp
 from homeassistant.components.sensor import SensorEntity
@@ -120,7 +120,7 @@ class ExampleSensor(SensorEntity):
 
                             self._departure_time_planned_attribute = departure_time_planned
                             self._departure_time_actual_attribute = departure_time_actual
-                            
+
                             self._departure_delay_attribute = (departure_time_actual - departure_time_planned).total_seconds() / 60 if departure_time_actual else None
                             self._arrival_delay_attribute = (self._arrival_time_actual_attribute - self._arrival_time_planned_attribute).total_seconds() / 60 if self._arrival_time_actual_attribute else None
                             self._travel_time_attribute = (self._arrival_time_actual_attribute - departure_time_actual).total_seconds() / 60 if self._arrival_time_actual_attribute and departure_time_actual else None
