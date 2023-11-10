@@ -1,15 +1,13 @@
 import asyncio
 import random
-import requests
 import logging
 from datetime import datetime
 import pytz
+import aiohttp
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.template import Template
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,22 +72,22 @@ class ExampleSensor(SensorEntity):
         }
 
         try:
-            response = await self.hass.async_add_executor_job(requests.get, base_url, params=params, headers=headers)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(base_url, params=params, headers=headers) as response:
+                    if response.status == 200:
+                        trip_data = await response.json()
 
-            if response.status_code == 200:
-                trip_data = response.json()
+                        min_departure_threshold = 5  # Minimum departure time threshold in minutes
+                        current_time = datetime.now(pytz.timezone("Europe/Amsterdam"))
 
-                min_departure_threshold = 5  # Minimum departure time threshold in minutes
-                current_time = datetime.now(pytz.timezone("Europe/Amsterdam"))
+                        for trip in trip_data['trips']:
+                            leg = trip['legs'][0]  # Assuming there is only one leg in the trip
+                            departure_time_planned = datetime.strptime(leg['origin']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
+                            departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else None
 
-                for trip in trip_data['trips']:
-                    leg = trip['legs'][0]  # Assuming there is only one leg in the trip
-                    departure_time_planned = datetime.strptime(leg['origin']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
-                    departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else None
-
-                    self._test_attribute = random.choice("abcdefghijkl")
-            else:
-                _LOGGER.debug("Error with the api call: %s", response.text)
+                            self._test_attribute = random.choice("abcdefghijkl")
+                    else:
+                        _LOGGER.debug("Error with the api call: %s", await response.text())
 
         except Exception as e:
             _LOGGER.error("Error making request to NS API: %s", e)
