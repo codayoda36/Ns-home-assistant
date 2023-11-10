@@ -20,7 +20,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 _LOGGER = logging.getLogger(__name__)
 
-
 CONF_ROUTES = "routes"
 CONF_FROM = "from"
 CONF_TO = "to"
@@ -214,46 +213,8 @@ class NSDepartureSensor(SensorEntity):
         return attributes
 
     async def async_update(self) -> None:
-        """Get the trip information."""
-        if not self.should_update:
-            return
-
-        # Set the search parameter to search from a specific trip time
-        # or to just search for the next trip.
-        if self._time:
-            trip_time = (
-                datetime.today()
-                .replace(hour=self._time.hour, minute=self._time.minute)
-                .strftime("%d-%m-%Y %H:%M")
-            )
-        else:
-            trip_time = datetime.now().strftime("%d-%m-%Y %H:%M")
-
-        try:
-            self._trips = await self.hass.async_add_executor_job(
-                self._nsapi.get_trips,
-                trip_time,
-                self._departure,
-                self._via,
-                self._heading,
-                True,
-                0,
-                2,
-            )
-            if self._trips is not None:  # Check if _trips is not None
-                if self._trips[0].departure_time_actual is None:
-                    planned_time = self._trips[0].departure_time_planned
-                    self._state = planned_time.strftime("%H:%M")
-                else:
-                    actual_time = self._trips[0].departure_time_actual
-                    self._state = actual_time.strftime("%H:%M")
-        except (
-            requests.exceptions.ConnectionError,
-            requests.exceptions.HTTPError,
-        ) as error:
-            _LOGGER.error("Couldn't fetch trip info: %s", error)
-            return
-
+        """Async update method."""
+        await self.update_manager.async_refresh()
 
 class NSDepartureSensorUpdateManager(DataUpdateCoordinator):
     """NS Departure Sensor Update Manager."""
@@ -262,9 +223,27 @@ class NSDepartureSensorUpdateManager(DataUpdateCoordinator):
         """Initialize the update manager."""
         self.sensor = sensor
         update_interval = timedelta(minutes=1)
-        super().__init__(sensor.hass, _LOGGER, name=f"NS Departure Sensor Update Manager - {sensor.name}", update_interval=update_interval)
+        super().__init__(
+            sensor.hass,
+            _LOGGER,
+            name=f"NS Departure Sensor Update Manager - {sensor.name}",
+            update_interval=update_interval,
+        )
 
     async def _async_update_data(self):
         """Fetch data from the sensor."""
-        await self.sensor.async_update()
+        await self.sensor._async_update()
         return self.sensor._trips
+
+def update_callback(self, data):
+    """Update callback for the NS Departure Sensor Update Manager."""
+    self._trips = data
+    if self._trips is not None:  # Check if _trips is not None
+        if self._trips[0].departure_time_actual is None:
+            planned_time = self._trips[0].departure_time_planned
+            self._state = planned_time.strftime("%H:%M")
+        else:
+            actual_time = self._trips[0].departure_time_actual
+            self._state = actual_time.strftime("%H:%M")
+
+# ... (remaining code)
