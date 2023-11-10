@@ -3,7 +3,7 @@
   "name": "Ns reisinformatie",
   "codeowners": [],
   "dependencies": [],
-  "documentation": "https://github.com/home-assistant/example-custom-config/tree/master/custom_components/example_sensor/",
+  "documentation": "https://github.com/codayoda36/Ns-home-assistant/edit/master/README.md",
   "iot_class": "local_polling",
   "requirements": [],
   "version": "0.1.0"
