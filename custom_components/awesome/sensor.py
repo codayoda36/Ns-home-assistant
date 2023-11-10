@@ -97,6 +97,6 @@ class ExampleSensor(SensorEntity):
                 _LOGGER.debug("Error with the api call: %s", response.text)
 
         except Exception as e:
-            _LOGGER.debug("A exception occured: %s", e)
-            self._test_attribute = e
+            _LOGGER.error("Error making request to NS API: %s", e)
+            self._test_attribute = "error"
         self.async_write_ha_state()
