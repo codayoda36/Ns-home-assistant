@@ -1,5 +1,6 @@
 import asyncio
 import random
+import logging
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -9,6 +10,8 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_track_time_interval(hass, interval, action):
     while True:
@@ -57,7 +60,7 @@ class ExampleSensor(SensorEntity):
 
     async def async_update(self):
         """Fetch new state data for the sensor.
-
+        _LOGGER.debug("Updating atributes")
         This is the only method that should fetch new data for Home Assistant.
         """
         base_url = "https://gateway.apiportal.ns.nl/reisinformatie-api/api/v3/trips"
@@ -67,11 +70,12 @@ class ExampleSensor(SensorEntity):
             "toStation": "shl"
             # Add more parameters as needed
         }
-
+        _LOGGER.debug("Setting params")
         headers = {
             "Ocp-Apim-Subscription-Key": "8437a73330144f1b82320e22b351af61"
             # Replace YOUR_SUBSCRIPTION_KEY with your actual subscription key
         }
+        _LOGGER.debug("Setting headers")
 
         try:
             response = requests.get(base_url, params=params, headers=headers)
@@ -87,10 +91,11 @@ class ExampleSensor(SensorEntity):
                     departure_time_planned = datetime.strptime(leg['origin']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
                     departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else None
 
+                    _LOGGER.debug("Setting attribute value")
                     self._test_attribute = leg
             else:
-                print(f"Error {response.status_code}: {response.text}")
+                _LOGGER.debug("Error with the api call: %s", response.text)
 
         except Exception as e:
-            print(f"An error occurred: {e}")
+            _LOGGER.debug("A exception occured: %s", e)
         self.async_write_ha_state()
