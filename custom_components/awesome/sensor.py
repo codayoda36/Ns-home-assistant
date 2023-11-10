@@ -92,10 +92,11 @@ class ExampleSensor(SensorEntity):
                     departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else None
 
                     _LOGGER.debug("Setting attribute value")
-                    self._test_attribute = leg
+                    self._test_attribute = random.choice("abcdefghijkl")
             else:
                 _LOGGER.debug("Error with the api call: %s", response.text)
 
         except Exception as e:
             _LOGGER.debug("A exception occured: %s", e)
+            self._test_attribute = random.choice("mnopqrstuvwxyz")
         self.async_write_ha_state()
