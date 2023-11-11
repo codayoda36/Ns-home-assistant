@@ -19,6 +19,7 @@ This custom sensor integration provides real-time travel information for train j
             to_station: "shl"
             sensor_name: "almere_to_schiphol"
             travel_time: "08:00"
+            max_tranfers: 1
           - from_station: "shl"
             to_station: "alm"
             sensor_name: "schiphol_to_almere"
@@ -43,6 +44,8 @@ This custom sensor integration provides real-time travel information for train j
   - `sensor_name`: Name of the sensor.
 
   - `travel_time (Optional)`: Departure time for the journey.
+    
+  - `max_tranfers (Optional)`: If this is set to 1 only routes with 1 or less tranfers are showen for this route.
  
 ### Sensor Attributes
 
@@ -75,3 +78,11 @@ This custom sensor integration provides real-time travel information for train j
 - `status`: Current status of the journey.
 
 - `last_updated`: Time when the sensor was last updated.
+  
+- `train_type`: The type of train for this route.
+  
+- `next_train`: The time the train after the current train departes.
+  
+- `punctionality`: Shows how often that train is on time.
+  
+- `crowd_forecast`: Shows how bussy it is in the train by best estemation.
