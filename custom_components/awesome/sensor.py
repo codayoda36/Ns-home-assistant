@@ -142,29 +142,29 @@ class ExampleSensor(SensorEntity):
                                 departure_time_actual = datetime.strptime(leg['origin']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['origin'] else departure_time_planned
                                 
                                 arrival_time_planned = datetime.strptime(leg['destination']['plannedDateTime'], "%Y-%m-%dT%H:%M:%S%z")
-                                arrival_time_actual = datetime.strptime(leg['destination']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['destination'] else self._arrival_time_planned_attribute
+                                arrival_time_actual = datetime.strptime(leg['destination']['actualDateTime'], "%Y-%m-%dT%H:%M:%S%z") if 'actualDateTime' in leg['destination'] else None
 
-                                actual_duration_in_minutes = trip['actualDurationInMinutes']
-                                planned_duration_in_minutes = trip['plannedDurationInMinutes']
+                                actual_duration_in_minutes = trip.get('actualDurationInMinutes')
+                                planned_duration_in_minutes = trip.get('plannedDurationInMinutes')
 
                                 if departure_time_planned > datetime.now(pytz.timezone("Europe/Amsterdam")) + timedelta(minutes=self._min_departure_threshold):
                                     next_trip = trip
                                     break
                                 
                             if 'next_trip' in locals():
-                                self._arrival_time_planned_attribute = arrival_time_planned.strftime("%H:%M")
-                                self._arrival_time_actual_attribute = arrival_time_actual.strftime("%H:%M")
+                                self._arrival_time_planned_attribute = arrival_time_planned.strftime("%H:%M") if arrival_time_planned else None
+                                self._arrival_time_actual_attribute = arrival_time_actual.strftime("%H:%M") if arrival_time_actual else None
 
                                 self._departure_time_planned_attribute = departure_time_planned.strftime("%H:%M")
-                                self._departure_time_actual_attribute = departure_time_actual.strftime("%H:%M")
+                                self._departure_time_actual_attribute = departure_time_actual.strftime("%H:%M") if departure_time_actual else None
 
                                 self._departure_delay_attribute = (departure_time_actual - departure_time_planned).total_seconds() / 60 if departure_time_actual else 0
                                 self._arrival_delay_attribute = (arrival_time_actual - arrival_time_planned).total_seconds() / 60 if arrival_time_actual else 0
                                 self._travel_time_actual_attribute = actual_duration_in_minutes if actual_duration_in_minutes else planned_duration_in_minutes
                                 self._travel_time_planned_attribute = planned_duration_in_minutes
-                                self._status_attribute = trip['status']
+                                self._status_attribute = trip.get('status')
 
-                                self._transfers_attribute = trip['transfers']
+                                self._transfers_attribute = trip.get('transfers')
                                 self._departure_platform_planned_attribute = leg['origin']['plannedTrack']
                                 self._departure_platform_actual_attribute = leg['origin']['actualTrack'] if 'actualTrack' in leg['origin'] else 'Not available'
                                 self._arrival_platform_planned_attribute = leg['destination']['plannedTrack']
