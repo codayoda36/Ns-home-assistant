@@ -33,14 +33,14 @@ For a custom hacs card for this integration go to: https://github.com/codayoda36
 
 ### Station Codes:
 - `station codes`: For the sations you need to use the sation code you can get those [here](https://nl.wikipedia.org/wiki/Lijst_van_spoorwegstations_in_Nederland).
-- 
+  
 ### Configuration Options:
 
 - `api_key`: Your NS API key. You can obtain it by [creating an account on the NS API portal](https://apiportal.ns.nl/).
-- `min_departure_threshold (Optional)`: Time before the next trip is showen so if this is set to 5 if the train leaves in 5 minutes or less the next train is showen. Default is `5` minutes.
-- `update_frequency (Optional)`: Frequency (in seconds) to update the sensor data. Default is `120` seconds.
-- `max_trips_showen (Optional)`: Define how many trips should be showen the default is 3
-- `trips_based_on_departure_time_actual (Optional)`: When trips_based_on_departure_time_actual is set to false, the displayed trips will be determined by their planned departure times rather than their actual departure times. For instance, if the current time is 13:00 and the planned departure time is 13:01, the trip will not be shown. However, if set to true, even if the current time is 13:00 and the actual departure time is 13:05 while the planned time is 13:01, the trip will still be displayed.
+- `min_departure_threshold (Optional)`: Time before the next trip is showen so if this is set to 5 if the train leaves in 5 minutes or less the next train is showen. `Default is 5 minutes`.
+- `update_frequency (Optional)`: Frequency (in seconds) to update the sensor data. `Default is 120 seconds`.
+- `max_trips_showen (Optional)`: Define how many trips should be showen. `Default is 3`.
+- `trips_based_on_departure_time_actual (Optional)`: When trips_based_on_departure_time_actual is set to false, the displayed trips will be determined by their planned departure times rather than their actual departure times. For instance, if the current time is 13:00 and the planned departure time is 13:01, the trip will not be shown. However, if set to true, even if the current time is 13:00 and the actual departure time is 13:05 while the planned time is 13:01, the trip will still be displayed. `Default is true`.
 - `routes`: List of dictionaries representing different routes. Each dictionary should contain the following parameters:
 
   - `from_station`: Departure station.
