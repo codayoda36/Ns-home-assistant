@@ -37,10 +37,10 @@ For a custom hacs card for this integration go to: https://github.com/codayoda36
 ### Configuration Options:
 
 - `api_key`: Your NS API key. You can obtain it by [creating an account on the NS API portal](https://apiportal.ns.nl/).
-- `min_departure_threshold (Optional)`: Time before the next trip is showen so if this is set to 5 if the train leaves in 5 minutes or less the next train is showen. `Default is 5 minutes`.
+- `min_departure_threshold (Optional)`: Time before the next trip is showen so if this is set to 5 if the train leaves in 5 minutes or less the next train is showen. `Default is 5 minutes`. It is possible to check on planned departure time (set trips_based_on_departure_time_actual on false) or on actual departure time (set trips_based_on_departure_time_actual to true)
 - `update_frequency (Optional)`: Frequency (in seconds) to update the sensor data. `Default is 120 seconds`.
 - `max_trips_showen (Optional)`: Define how many trips should be showen. `Default is 3`.
-- `trips_based_on_departure_time_actual (Optional)`: When trips_based_on_departure_time_actual is set to false, the displayed trips will be determined by their planned departure times rather than their actual departure times. For instance, if the current time is 13:00 and the planned departure time is 13:01, the trip will not be shown. However, if set to true, even if the current time is 13:00 and the actual departure time is 13:05 while the planned time is 13:01, the trip will still be displayed. `Default is true`.
+- `trips_based_on_departure_time_actual (Optional)`: check on planned departure time, set value on false. Check on actual departure time, set value to true. `Default true`.
 - `routes`: List of dictionaries representing different routes. Each dictionary should contain the following parameters:
 
   - `from_station`: Departure station.
